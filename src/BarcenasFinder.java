@@ -298,8 +298,10 @@ public class BarcenasFinder extends Agent {
                 variablePositive.insertFirst(linealIndex);
                 variableNegative.insertFirst(-linealIndex);
                 
+                System.out.println("as" + i + "," + j);
                 if (!(solver.isSatisfiable(variablePositive))){
                     futureToPast.add(variableNegative);
+                    
                 }
                 
                 if(!(solver.isSatisfiable(variableNegative))) {
