@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.sat4j.core.VecInt;
@@ -99,6 +100,8 @@ class FinderBehaviour extends CyclicBehaviour {
                     Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (ContradictionException ex) {
                     Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (TimeoutException ex) {
+                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
                 }
                 ((BarcenasFinder) myAgent).moveToNext();
                 state = 1;
@@ -138,11 +141,10 @@ public class BarcenasFinder extends Agent {
     AID EnvironmentAgentID;
     int WorldDim;
     String StepsFile;
-    ISolver solver = SolverFactory.newDefault(); // defaultSolver();
-    IProblem problem;
     int BarcenasPastOffset;
     int BarcenasFutureOffset;
     int ScopeOffset;
+    ArrayList<VecInt> futureToPast = null;
     Path gammaPath = Paths.get("./gamma.cnf");
 
     // Get the nickname of the environment Agent from the arguments
@@ -162,15 +164,6 @@ public class BarcenasFinder extends Agent {
         idNextStep = 0;
         System.out.println("Starting Finder Agent !!! " + args.length);
 
-        try {
-            buildGamma(solver);
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ContradictionException ex) {
-            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
-        }
         // Testing here the use of the SAT solver sat4j
         /*
         ISolver solver = SolverFactory.newDefault(); // defaultSolver();
@@ -274,18 +267,52 @@ public class BarcenasFinder extends Agent {
         }
     }
 
-    public void smellAt(int x, int y, String smells) throws ParseFormatException, IOException, ContradictionException {
-        solver.clone();
-        smells.equals("YES");
+    public void smellAt(int x, int y, String smells) throws ParseFormatException, IOException, ContradictionException, TimeoutException {
+        // Build Gamma
+        ISolver solver = buildGamma();
+
+        //Add the evidence
+        VecInt evidence = new VecInt();
+        if (smells.equals("YES")) {
+            evidence.insertFirst((x - 1) * WorldDim + y - 1 + ScopeOffset);
+        } else {
+            evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + ScopeOffset));
+        }
+        solver.addBlockingClause(evidence);
+
+        //Add the last future clauses to past clauses
+        if (futureToPast != null) {
+            Iterator it = futureToPast.iterator();
+            while (it.hasNext()) {
+                solver.addBlockingClause((VecInt) it.next());
+            }
+        }
+
+        futureToPast = new ArrayList<VecInt>();
+        
         for (int i = 1; i < WorldDim + 1; i++) {
             for (int j = 1; j < WorldDim + 1; j++) {
-               
+                int linealIndex = (i-1) * WorldDim + j-1 + BarcenasFutureOffset;
+                VecInt variablePositive = new VecInt();
+                VecInt variableNegative = new VecInt();
+                variablePositive.insertFirst(linealIndex);
+                variableNegative.insertFirst(-linealIndex);
+                
+                if (!(solver.isSatisfiable(variablePositive))){
+                    futureToPast.add(variableNegative);
+                }
+                
+                if(!(solver.isSatisfiable(variableNegative))) {
+                    System.out.println("Barcenas Found at " + i + "," + j);
+                    takeDown();
+                }
             }
         }
 
     }
 
-    public void buildGamma(ISolver solver) throws UnsupportedEncodingException, FileNotFoundException, IOException, ContradictionException {
+    public ISolver buildGamma() throws UnsupportedEncodingException, FileNotFoundException, IOException, ContradictionException {
+        ISolver solver = SolverFactory.newDefault();
         solver.setTimeout(3600);
         int worldLinealDim = WorldDim * WorldDim;
         solver.newVar(worldLinealDim * 3);
@@ -355,6 +382,7 @@ public class BarcenasFinder extends Agent {
         Files.write(gammaPath, notInPast.getBytes(), StandardOpenOption.APPEND);
         Files.write(gammaPath, notInFuture.getBytes(), StandardOpenOption.APPEND);
 
+        return solver;
     }
 
     protected void takeDown() {
