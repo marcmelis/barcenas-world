@@ -269,11 +269,12 @@ public class BarcenasFinder extends Agent {
 
     public void buildGamma(ISolver solver) throws UnsupportedEncodingException, FileNotFoundException, IOException {
         solver.setTimeout(3600);
-        Files.write(gammaPath, "p cnf".getBytes(), StandardOpenOption.CREATE);
+        Files.write(gammaPath, "p cnf \n".getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
 
         int worldLinealDim = WorldDim * WorldDim;
         int actualLiteral = 1;
 
+        Files.write(gammaPath, "c barcenas past\n".getBytes(), StandardOpenOption.APPEND);
         // Barcenas t-1, from 1,1 to n,n (nxn clauses)
         BarcenasPastOffset = actualLiteral;
         String barcenasPast = "";
@@ -284,6 +285,7 @@ public class BarcenasFinder extends Agent {
         barcenasPast += "0\n";
         Files.write(gammaPath, barcenasPast.getBytes(), StandardOpenOption.APPEND);
 
+        Files.write(gammaPath, "c barcenas future\n".getBytes(), StandardOpenOption.APPEND);
         // Barcenas t+1, from 1,1 to n,n (nxn clauses)
         BarcenasFutureOffset = actualLiteral;
         String barcenasFuture = "";
@@ -295,8 +297,9 @@ public class BarcenasFinder extends Agent {
         Files.write(gammaPath, barcenasFuture.getBytes(), StandardOpenOption.APPEND);
 
         // Barcenas t-1 -> Barcenas t+1 (nxn clauses)
+        Files.write(gammaPath, "c monotone barcenas t-1 -> t+1\n".getBytes(), StandardOpenOption.APPEND);
         for (int i = 0; i < worldLinealDim; i++) {
-            String update = String.valueOf(i)
+            String update = String.valueOf(i + 1)
                     + " "
                     + String.valueOf(-(i + BarcenasFutureOffset))
                     + " 0\n";
@@ -305,39 +308,40 @@ public class BarcenasFinder extends Agent {
 
         // Scope implications (nxnxnxn clauses)
         ScopeOffset = actualLiteral;
-        
+        Files.write(gammaPath, "c scope implications\n".getBytes(), StandardOpenOption.APPEND);
         for (int y = 0; y < worldLinealDim; y++) {
             String positiveScope = String.valueOf(actualLiteral);
             String negativeScope = String.valueOf(-actualLiteral);
-            int scope_x = (actualLiteral - 2*worldLinealDim) / WorldDim;
-            int scope_y = (actualLiteral - 2*worldLinealDim) % WorldDim;
-            for(int i = 0; i < WorldDim; i++){
-                for(int j = 0; j < WorldDim; j++) {
-                   // if in range of the scope
-                   if((i == scope_x && j == scope_y) ||
-                           ( (i + 1) == scope_x && j == scope_y) ||
-                           ( (i - 1) == scope_x && j == scope_y) ||
-                           ( i == scope_x && (j + 1) == scope_y) ||
-                           ( i  == scope_x && (j - 1) == scope_y) ) {
-                       String scopeImplication = negativeScope + 
-                               " " + 
-                               String.valueOf(-(BarcenasFutureOffset + i * WorldDim + j)) +
-                               "0\n";
-                       Files.write(gammaPath, scopeImplication.getBytes(), StandardOpenOption.APPEND);
-                   } else {
-                       String scopeImplication = positiveScope + 
-                               " " + 
-                               String.valueOf(-(BarcenasFutureOffset + i * WorldDim + j)) +
-                               "0\n";
-                       Files.write(gammaPath, scopeImplication.getBytes(), StandardOpenOption.APPEND);
-                   }
-                 
+            int scope_x = (actualLiteral - 2 * worldLinealDim - 1) / WorldDim + 1;
+            int scope_y = actualLiteral % WorldDim;
+            if (scope_y == 0) scope_y = WorldDim;
+            for (int i = 0; i < WorldDim; i++) {
+                for (int j = 0; j < WorldDim; j++) {
+                    // if in range of the scope
+                    if (((i +1 ) == scope_x && (j +1) == scope_y)
+                            || ((i + 2) == scope_x && (j + 1) == scope_y)
+                            || ((i) == scope_x && (j + 1) == scope_y)
+                            || ((i + 1) == scope_x && (j + 2) == scope_y)
+                            || ((i + 1) == scope_x && (j) == scope_y)) {
+                        String scopeImplication = negativeScope
+                                + " "
+                                + String.valueOf(-(BarcenasFutureOffset + i * WorldDim + j))
+                                + " 0\n";
+                        Files.write(gammaPath, scopeImplication.getBytes(), StandardOpenOption.APPEND);
+                    } else {
+                        String scopeImplication = positiveScope
+                                + " "
+                                + String.valueOf(-(BarcenasFutureOffset + i * WorldDim + j))
+                                + " 0\n";
+                        Files.write(gammaPath, scopeImplication.getBytes(), StandardOpenOption.APPEND);
+                    }
+
                 }
-            }  
+            }
             actualLiteral++;
 
         }
-        
+
         // Not in the 1,1 clauses (2 clauses)
         String notInPast = "-" + String.valueOf(BarcenasPastOffset) + " 0\n";
         String notInFuture = "-" + String.valueOf(BarcenasFutureOffset) + " 0\n";
