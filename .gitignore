@@ -28,3 +28,4 @@ manifest.mf
 build.xml
 *.txt
 *.sh
+src/barcenas/*
