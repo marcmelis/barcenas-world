@@ -11,9 +11,13 @@ import jade.core.behaviours.*;
 import java.util.ArrayList;
 import jade.core.AID;
 import jade.lang.acl.*;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.*;
+import java.io.UnsupportedEncodingException;
+//import java.io.;
 import static java.lang.System.exit;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -85,8 +89,16 @@ class FinderBehaviour extends CyclicBehaviour {
                     // that it DOES NOT smell at position sx sy
                     System.out.println("FINDER: It DOES NOT smell at " + smellresult[0] + " " + smellresult[1]);
                 }
-                // Get answer from the formula adding the evidence
-                ((BarcenasFinder) myAgent).smellAt(sx, sy, smellresult[2]);
+                try {
+                    // Get answer from the formula adding the evidence
+                    ((BarcenasFinder) myAgent).smellAt(sx, sy, smellresult[2]);
+                } catch (ParseFormatException ex) {
+                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ContradictionException ex) {
+                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
+                }
                 ((BarcenasFinder) myAgent).moveToNext();
                 state = 1;
             }
@@ -259,12 +271,17 @@ public class BarcenasFinder extends Agent {
         }
     }
 
-    public void smellAt(int x, int i, String smells) {
-        if (smells.equals("YES")) {
-
-        } else {
-
+    public void smellAt(int x, int y, String smells) throws ParseFormatException, IOException, ContradictionException {
+        IProblem problemInstance;
+        Reader reader = new DimacsReader(solver);
+        problemInstance = reader.parseInstance("gamma.cnf");
+        smells.equals("YES");
+        for(int i=1; i< WorldDim+1; i++) {
+            for (int j=1; j< WorldDim+1; j++){
+                problemInstance.
+            }
         }
+
     }
 
     public void buildGamma(ISolver solver) throws UnsupportedEncodingException, FileNotFoundException, IOException {
