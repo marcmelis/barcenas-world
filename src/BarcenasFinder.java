@@ -269,9 +269,12 @@ public class BarcenasFinder extends Agent {
 
     public void buildGamma(ISolver solver) throws UnsupportedEncodingException, FileNotFoundException, IOException {
         solver.setTimeout(3600);
-        Files.write(gammaPath, "p cnf \n".getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
-
         int worldLinealDim = WorldDim * WorldDim;
+        String firstLine = "p cnf " 
+                + String.valueOf(worldLinealDim * 3) + " " 
+                + String.valueOf(2 + worldLinealDim + worldLinealDim * 2 + 2) + " 0\n";               
+        Files.write(gammaPath, firstLine.getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
+
         int actualLiteral = 1;
 
         Files.write(gammaPath, "c barcenas past\n".getBytes(), StandardOpenOption.APPEND);
