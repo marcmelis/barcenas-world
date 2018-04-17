@@ -26,6 +26,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.sat4j.core.VecInt;
 
 import org.sat4j.specs.*;
 import org.sat4j.minisat.*;
@@ -167,6 +168,8 @@ public class BarcenasFinder extends Agent {
             Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ContradictionException ex) {
+            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
         }
         // Testing here the use of the SAT solver sat4j
         /*
@@ -272,89 +275,74 @@ public class BarcenasFinder extends Agent {
     }
 
     public void smellAt(int x, int y, String smells) throws ParseFormatException, IOException, ContradictionException {
-        IProblem problemInstance;
-        Reader reader = new DimacsReader(solver);
-        problemInstance = reader.parseInstance("gamma.cnf");
+        solver.clone();
         smells.equals("YES");
-        for(int i=1; i< WorldDim+1; i++) {
-            for (int j=1; j< WorldDim+1; j++){
-                problemInstance.
+        for (int i = 1; i < WorldDim + 1; i++) {
+            for (int j = 1; j < WorldDim + 1; j++) {
+               
             }
         }
 
     }
 
-    public void buildGamma(ISolver solver) throws UnsupportedEncodingException, FileNotFoundException, IOException {
+    public void buildGamma(ISolver solver) throws UnsupportedEncodingException, FileNotFoundException, IOException, ContradictionException {
         solver.setTimeout(3600);
         int worldLinealDim = WorldDim * WorldDim;
         solver.newVar(worldLinealDim * 3);
         solver.setExpectedNumberOfClauses(2 + worldLinealDim + worldLinealDim * 2 + 2);
-                      
 
         int actualLiteral = 1;
 
-        Files.write(gammaPath, "c barcenas past\n".getBytes(), StandardOpenOption.APPEND);
         // Barcenas t-1, from 1,1 to n,n (nxn clauses)
         BarcenasPastOffset = actualLiteral;
-        String barcenasPast = "";
+        VecInt pastClause = new VecInt();
         for (int i = 0; i < worldLinealDim; i++) {
-            barcenasPast += String.valueOf(actualLiteral) + " ";
+            pastClause.insertFirst(actualLiteral);
             actualLiteral++;
         }
-        barcenasPast += "0\n";
-        Files.write(gammaPath, barcenasPast.getBytes(), StandardOpenOption.APPEND);
+        solver.addClause(pastClause);
 
-        Files.write(gammaPath, "c barcenas future\n".getBytes(), StandardOpenOption.APPEND);
         // Barcenas t+1, from 1,1 to n,n (nxn clauses)
         BarcenasFutureOffset = actualLiteral;
-        String barcenasFuture = "";
+        VecInt futureClause = new VecInt();
         for (int i = 0; i < worldLinealDim; i++) {
-            barcenasFuture += String.valueOf(actualLiteral) + " ";
+            futureClause.insertFirst(actualLiteral);
             actualLiteral++;
         }
-        barcenasFuture += "0\n";
-        Files.write(gammaPath, barcenasFuture.getBytes(), StandardOpenOption.APPEND);
+        solver.addClause(futureClause);
 
         // Barcenas t-1 -> Barcenas t+1 (nxn clauses)
-        Files.write(gammaPath, "c monotone barcenas t-1 -> t+1\n".getBytes(), StandardOpenOption.APPEND);
         for (int i = 0; i < worldLinealDim; i++) {
-            String update = String.valueOf(i + 1)
-                    + " "
-                    + String.valueOf(-(i + BarcenasFutureOffset))
-                    + " 0\n";
-            Files.write(gammaPath, update.getBytes(), StandardOpenOption.APPEND);
+            VecInt clause = new VecInt();
+            clause.insertFirst(i + 1);
+            clause.insertFirst(-(i + BarcenasFutureOffset));
+            solver.addClause(clause);
         }
 
         // Scope implications (nxnxnxn clauses)
         ScopeOffset = actualLiteral;
-        Files.write(gammaPath, "c scope implications\n".getBytes(), StandardOpenOption.APPEND);
         for (int y = 0; y < worldLinealDim; y++) {
-            String positiveScope = String.valueOf(actualLiteral);
-            String negativeScope = String.valueOf(-actualLiteral);
             int scope_x = (actualLiteral - 2 * worldLinealDim - 1) / WorldDim + 1;
             int scope_y = actualLiteral % WorldDim;
-            if (scope_y == 0) scope_y = WorldDim;
+            if (scope_y == 0) {
+                scope_y = WorldDim;
+            }
             for (int i = 0; i < WorldDim; i++) {
                 for (int j = 0; j < WorldDim; j++) {
                     // if in range of the scope
-                    if (((i +1 ) == scope_x && (j +1) == scope_y)
+                    if (((i + 1) == scope_x && (j + 1) == scope_y)
                             || ((i + 2) == scope_x && (j + 1) == scope_y)
                             || ((i) == scope_x && (j + 1) == scope_y)
                             || ((i + 1) == scope_x && (j + 2) == scope_y)
                             || ((i + 1) == scope_x && (j) == scope_y)) {
-                        String scopeImplication = negativeScope
-                                + " "
-                                + String.valueOf(-(BarcenasFutureOffset + i * WorldDim + j))
-                                + " 0\n";
-                        Files.write(gammaPath, scopeImplication.getBytes(), StandardOpenOption.APPEND);
+                        VecInt clause = new VecInt();
+                        clause.insertFirst(-actualLiteral);
+                        clause.insertFirst(-(BarcenasFutureOffset + i * WorldDim + j));
                     } else {
-                        String scopeImplication = positiveScope
-                                + " "
-                                + String.valueOf(-(BarcenasFutureOffset + i * WorldDim + j))
-                                + " 0\n";
-                        Files.write(gammaPath, scopeImplication.getBytes(), StandardOpenOption.APPEND);
+                        VecInt clause = new VecInt();
+                        clause.insertFirst(actualLiteral);
+                        clause.insertFirst(-(BarcenasFutureOffset + i * WorldDim + j));
                     }
-
                 }
             }
             actualLiteral++;
