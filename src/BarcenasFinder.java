@@ -15,15 +15,11 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 //import java.io.;
 import static java.lang.System.exit;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,7 +28,6 @@ import org.sat4j.core.VecInt;
 import org.sat4j.specs.*;
 import org.sat4j.minisat.*;
 import org.sat4j.reader.*;
-import org.sat4j.reader.DimacsReader;
 
 // The cyclic behaviour of the Finder Agent:
 //
@@ -45,6 +40,8 @@ class FinderBehaviour extends CyclicBehaviour {
     //  1.  Waiting to get position information
     //  2.  Waiting to get smell sensor information (from current position)
     int state = 1;
+    int WorldDimension;
+    String[][] matrix;
 
     // Wait for next message from the Environment Agent,
     // to "sense" what is the current position.
@@ -52,6 +49,21 @@ class FinderBehaviour extends CyclicBehaviour {
     // Use the smell sensor to obtain from the Environment
     // the smell in the current position
     //
+    public FinderBehaviour(int dimension) {
+        WorldDimension = dimension;
+
+        matrix = new String[WorldDimension][WorldDimension];
+        for (int i = 0; i < WorldDimension; i++) {
+            for (int j = 0; j < WorldDimension; j++) {
+                if (i == 0 && j == 0) {
+                    matrix[i][j] = "X";
+                } else {
+                    matrix[i][j] = "?";
+                }
+            }
+        }
+    }
+
     public void action() {
         // Get next message from evironment Agent
         ACLMessage msg = myAgent.receive();
@@ -94,6 +106,7 @@ class FinderBehaviour extends CyclicBehaviour {
                 try {
                     // Get answer from the formula adding the evidence
                     ((BarcenasFinder) myAgent).smellAt(sx, sy, smellresult[2]);
+                    printMatrix();
                 } catch (ParseFormatException ex) {
                     Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException ex) {
@@ -111,6 +124,17 @@ class FinderBehaviour extends CyclicBehaviour {
         }
     }
 
+    public void printMatrix() {
+        System.out.println("\n#### Printing matrix ####");
+        for (int i = 0; i < WorldDimension; i++) {
+            System.out.print("\t");
+            for (int j = 0; j < WorldDimension; j++) {
+                System.out.print(matrix[i][j] + " ");
+            }
+            System.out.print("\n");
+        }
+        System.out.println("#########################");
+    }
 }
 
 class Position {
@@ -140,11 +164,12 @@ public class BarcenasFinder extends Agent {
     String EnvironmentAgentNickName = "BarcenasWorld";
     AID EnvironmentAgentID;
     int WorldDim;
-    int WorldLinealDim;
     String StepsFile;
     int BarcenasPastOffset;
     int BarcenasFutureOffset;
     int ScopeOffset;
+    ISolver solver;
+    Boolean BarcenasFound = false;
     ArrayList<VecInt> futureToPast = null;
     Path gammaPath = Paths.get("./gamma.cnf");
 
@@ -158,6 +183,15 @@ public class BarcenasFinder extends Agent {
         if (args != null && args.length > 2) {
             WorldDim = Integer.parseInt((String) args[1]);
             StepsFile = (String) args[2];
+            try {
+                solver = buildGamma();
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ContradictionException ex) {
+                Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } else {
             System.out.println("FINDER: Not enough args");
@@ -189,12 +223,7 @@ public class BarcenasFinder extends Agent {
             listOfSteps.add(new Position(Integer.parseInt(coords[0]), Integer.parseInt(coords[1])));
             System.out.println(listOfSteps.get(i).x + "  -  " + listOfSteps.get(i).y);
         }
-        /* Manual
-        listOfSteps.add(new Position(1, 1));
-        listOfSteps.add(new Position(1, 2));
-        listOfSteps.add(new Position(1, 3));
-        listOfSteps.add(new Position(2, 3));
-         */
+
         numMovements = listOfSteps.size();
         if (args != null && args.length > 0) {
             EnvironmentAgentNickName = (String) args[0];
@@ -203,7 +232,7 @@ public class BarcenasFinder extends Agent {
         }
         System.out.println("Getting name of World Agent !!" + EnvironmentAgentNickName);
         EnvironmentAgentID = new AID(EnvironmentAgentNickName, AID.ISLOCALNAME);
-        addBehaviour(new FinderBehaviour());
+        addBehaviour(new FinderBehaviour(WorldDim));
         moveToNext();
     }
 
@@ -242,8 +271,6 @@ public class BarcenasFinder extends Agent {
     }
 
     public void smellAt(int x, int y, String smells) throws ParseFormatException, IOException, ContradictionException, TimeoutException {
-        // Build Gamma
-        ISolver solver = buildGamma();
 
         //Add the evidence
         VecInt evidence = new VecInt();
@@ -256,39 +283,41 @@ public class BarcenasFinder extends Agent {
 
         //Add the last future clauses to past clauses
         if (futureToPast != null) {
-//            System.out.println("Cons" + futureToPast);
-//            System.exit(1);
             Iterator it = futureToPast.iterator();
             while (it.hasNext()) {
                 solver.addClause((VecInt) it.next());
             }
-        } 
+        }
         futureToPast = new ArrayList<VecInt>();
         
         for (int i = 1; i < WorldDim + 1; i++) {
             for (int j = 1; j < WorldDim + 1; j++) {
-                int linealIndex = (i-1) * WorldDim + j-1 + BarcenasFutureOffset;
+                int linealIndex = (i - 1) * WorldDim + j - 1 + BarcenasFutureOffset;
                 VecInt variablePositive = new VecInt();
                 VecInt variableNegative = new VecInt();
                 variablePositive.insertFirst(linealIndex);
                 variableNegative.insertFirst(-linealIndex);
-                
-                if (!(solver.isSatisfiable(variablePositive))){
-                    futureToPast.add(variableNegative); 
-                    System.out.println("FINDER: Barcenas not in " + i + "," + j );
-                } 
 
-                if(!(solver.isSatisfiable(variableNegative))) {
+                if (!(solver.isSatisfiable(variablePositive))) {
+                    futureToPast.add(variableNegative);
+                    //System.out.println("FINDER: Adding " + i + "," + j );
+                }
+
+                if (!(solver.isSatisfiable(variableNegative))) {
                     System.out.println("FINDER: Barcenas Found at " + i + "," + j);
-                    takeDown();
+                    BarcenasFound= true;
                 }
             }
+        }
+        
+        if (BarcenasFound) {
+            takeDown();
         }
 
     }
 
     public ISolver buildGamma() throws UnsupportedEncodingException, FileNotFoundException, IOException, ContradictionException {
-        ISolver solver = SolverFactory.newDefault();
+        solver = SolverFactory.newDefault();
         solver.setTimeout(3600);
         int worldLinealDim = WorldDim * WorldDim;
         solver.newVar(worldLinealDim * 3);
@@ -364,19 +393,7 @@ public class BarcenasFinder extends Agent {
 
         return solver;
     }
-    
-    public int [] linealToCoord (int lineal) {
-        int [] coords = new int[2];
-        coords[0] = (((lineal % (WorldDim * WorldDim)) -1 )/ WorldDim) + 1;
-        coords[1] = lineal % WorldDim;
-        if (coords[1] == 0) coords[1] = WorldDim;
-        return coords;
-    }
 
-    public int coordToLineal(int x, int y, int offset) {
-        return (x - 1) * WorldDim + (y - 1) + offset;
-    }
-    @Override
     protected void takeDown() {
         System.out.println("Agent " + getAID().getName() + " terminating ");
         System.exit(0);
