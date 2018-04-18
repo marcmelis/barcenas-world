@@ -23,7 +23,7 @@ class EnvBehaviour extends CyclicBehaviour {
             String ny;
             int inx, iny;
 
-            System.out.println(" WORLD:received message with content: " + tokens[0] + " " + tokens[1] + " " + tokens[2]);
+            System.out.println("\tWORLD => Received message with content: " + tokens[0] + " " + tokens[1] + " " + tokens[2]);
             // myAgent.getLocalName()
             if (tokens[0].equals("MOVETO")) {
                 ACLMessage reply = msg.createReply();
@@ -33,15 +33,15 @@ class EnvBehaviour extends CyclicBehaviour {
                 ny = tokens[2];
                 inx = Integer.parseInt(nx);
                 iny = Integer.parseInt(ny);
-                System.out.println(" WORLD: Checking right position ");
+                System.out.println("\tWORLD => Checking right position ");
                 if (((BarcenasWorldEnv) myAgent).withinLimits(inx, iny)) {
                     reply.setContent("MOVEDTO " + nx + " " + ny);
-                    System.out.println(" World: moving agent to " + nx + "," + ny);
+                    System.out.println("\tWORLD => moving agent to (" + nx + "," + ny + ")");
                 } else {
                     reply.setContent("NOTMOVEDTO " + nx + " " + ny);
-                    System.out.println(" World: NOT moving agent to " + nx + "," + ny);
+                    System.out.println("\tWORLD => NOT moving agent to (" + nx + "," + ny + ")");
                 }
-                System.out.println(" WORLD:sending reply message with content: " + reply.getContent());
+                System.out.println("\tWORLD => Sending reply message with content: " + reply.getContent());
                 myAgent.send(reply);
             } else if (tokens[0].equals("SMELLAT")) {
                 ACLMessage reply = msg.createReply();
@@ -52,10 +52,10 @@ class EnvBehaviour extends CyclicBehaviour {
 
                 if (((BarcenasWorldEnv) myAgent).isBarcenasAround(inx, iny)) {
                     reply.setContent(nx + " " + ny + " " + "YES");
-                    System.out.println("WORLD: It smells at " + nx + " " + ny);
+                    System.out.println("\tWORLD => It smells at (" + nx + "," + ny + ")");
                 } else {
                     reply.setContent(nx + " " + ny + " " + "NO");
-                    System.out.println("WORLD: It DOES not smell at " + nx + " " + ny);
+                    System.out.println("\tWORLD => It DOES not smell at (" + nx + "," + ny + ")");
                 }
                 myAgent.send(reply);
             }
@@ -110,14 +110,14 @@ public class BarcenasWorldEnv extends Agent {
             BarcenasX = Integer.parseInt((String) args[1]);
             BarcenasY = Integer.parseInt((String) args[2]);
         } else {
-            System.out.println("WORLD: Not enough args");
+            System.out.println("\tWORLD: Not enough args");
         }
 
         addBehaviour(new EnvBehaviour());
     }
 
     protected void takeDown() {
-        System.out.println("Agent " + getAID().getName() + " terminating ");
+        System.out.println("\tAgent " + getAID().getName() + " terminating... ");
     }
 
 }
