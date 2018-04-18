@@ -164,33 +164,6 @@ public class BarcenasFinder extends Agent {
         idNextStep = 0;
         System.out.println("Starting Finder Agent !!! " + args.length);
 
-        // Testing here the use of the SAT solver sat4j
-        /*
-        ISolver solver = SolverFactory.newDefault(); // defaultSolver();
-        IProblem problem;
-        solver.setTimeout(3600); // 1 hour timeout
-        Reader reader = new DimacsReader(solver);
-        PrintWriter out = new PrintWriter(System.out, true);
-
-        try {
-            problem = reader.parseInstance("test2.cnf");
-
-            if (problem.isSatisfiable()) {
-                System.out.println("TEST CNF Satisfiable !");
-                reader.decode(problem.model(), out);
-            } else {
-                System.out.println("Unsatisfiable !");
-            }
-        } catch (ParseFormatException e) {
-            System.out.println("Parse format error, sorry!");
-        } catch (IOException e) {
-            System.out.println("IO error, sorry!");
-        } catch (ContradictionException e) {
-            System.out.println("Unsatisfiable (trivial)!");
-        } catch (TimeoutException e) {
-            System.out.println("Timeout, sorry!");
-        }
-         */
         // Prepare a list of movements to try with the FINDER
         // Agent
         String steps = "";
@@ -278,16 +251,17 @@ public class BarcenasFinder extends Agent {
         } else {
             evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + ScopeOffset));
         }
-        solver.addBlockingClause(evidence);
+        solver.addClause(evidence);
 
         //Add the last future clauses to past clauses
         if (futureToPast != null) {
+//            System.out.println("Cons" + futureToPast);
+//            System.exit(1);
             Iterator it = futureToPast.iterator();
             while (it.hasNext()) {
-                solver.addBlockingClause((VecInt) it.next());
+                solver.addClause((VecInt) it.next());
             }
-        }
-
+        } 
         futureToPast = new ArrayList<VecInt>();
         
         for (int i = 1; i < WorldDim + 1; i++) {
@@ -298,15 +272,20 @@ public class BarcenasFinder extends Agent {
                 variablePositive.insertFirst(linealIndex);
                 variableNegative.insertFirst(-linealIndex);
                 
-                System.out.println("as" + i + "," + j);
+//                if (!solver.isSatisfiable()) {
+//                    System.err.println("ERROR "+ x + "," + y + " : " + i + "," + j + "->" + linealIndex);
+//                    System.exit(1);
+//                } else {
+//                    System.out.println("OK " + x + "," + y + " : " + i + "," + j+ "->" + linealIndex);
+//                }
                 if (!(solver.isSatisfiable(variablePositive))){
-                    futureToPast.add(variableNegative);
-                    
-                }
-                
+                    futureToPast.add(variableNegative); 
+                    System.out.println("FINDER: Adding " + i + "," + j );
+                } 
+
                 if(!(solver.isSatisfiable(variableNegative))) {
-                    System.out.println("Barcenas Found at " + i + "," + j);
-                    takeDown();
+                    System.out.println("FINDER: Barcenas Found at " + i + "," + j);
+                    doDelete();
                 }
             }
         }
@@ -365,12 +344,14 @@ public class BarcenasFinder extends Agent {
                             || ((i + 1) == scope_x && (j + 2) == scope_y)
                             || ((i + 1) == scope_x && (j) == scope_y)) {
                         VecInt clause = new VecInt();
-                        clause.insertFirst(-actualLiteral);
-                        clause.insertFirst(-(BarcenasFutureOffset + i * WorldDim + j));
-                    } else {
-                        VecInt clause = new VecInt();
                         clause.insertFirst(actualLiteral);
                         clause.insertFirst(-(BarcenasFutureOffset + i * WorldDim + j));
+                        solver.addClause(clause);
+                    } else {
+                        VecInt clause = new VecInt();
+                        clause.insertFirst(-actualLiteral);
+                        clause.insertFirst(-(BarcenasFutureOffset + i * WorldDim + j));
+                        solver.addClause(clause);
                     }
                 }
             }
@@ -379,10 +360,12 @@ public class BarcenasFinder extends Agent {
         }
 
         // Not in the 1,1 clauses (2 clauses)
-        String notInPast = "-" + String.valueOf(BarcenasPastOffset) + " 0\n";
-        String notInFuture = "-" + String.valueOf(BarcenasFutureOffset) + " 0\n";
-        Files.write(gammaPath, notInPast.getBytes(), StandardOpenOption.APPEND);
-        Files.write(gammaPath, notInFuture.getBytes(), StandardOpenOption.APPEND);
+        VecInt notInFuture = new VecInt();
+        VecInt notInPast = new VecInt();
+        notInFuture.insertFirst(-BarcenasFutureOffset);
+        notInPast.insertFirst(-BarcenasPastOffset);
+        solver.addClause(notInFuture);
+        solver.addClause(notInPast);
 
         return solver;
     }
