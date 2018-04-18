@@ -140,6 +140,7 @@ public class BarcenasFinder extends Agent {
     String EnvironmentAgentNickName = "BarcenasWorld";
     AID EnvironmentAgentID;
     int WorldDim;
+    int WorldLinealDim;
     String StepsFile;
     int BarcenasPastOffset;
     int BarcenasFutureOffset;
@@ -272,20 +273,14 @@ public class BarcenasFinder extends Agent {
                 variablePositive.insertFirst(linealIndex);
                 variableNegative.insertFirst(-linealIndex);
                 
-//                if (!solver.isSatisfiable()) {
-//                    System.err.println("ERROR "+ x + "," + y + " : " + i + "," + j + "->" + linealIndex);
-//                    System.exit(1);
-//                } else {
-//                    System.out.println("OK " + x + "," + y + " : " + i + "," + j+ "->" + linealIndex);
-//                }
                 if (!(solver.isSatisfiable(variablePositive))){
                     futureToPast.add(variableNegative); 
-                    System.out.println("FINDER: Adding " + i + "," + j );
+                    System.out.println("FINDER: Barcenas not in " + i + "," + j );
                 } 
 
                 if(!(solver.isSatisfiable(variableNegative))) {
                     System.out.println("FINDER: Barcenas Found at " + i + "," + j);
-                    doDelete();
+                    takeDown();
                 }
             }
         }
@@ -369,9 +364,22 @@ public class BarcenasFinder extends Agent {
 
         return solver;
     }
+    
+    public int [] linealToCoord (int lineal) {
+        int [] coords = new int[2];
+        coords[0] = (((lineal % (WorldDim * WorldDim)) -1 )/ WorldDim) + 1;
+        coords[1] = lineal % WorldDim;
+        if (coords[1] == 0) coords[1] = WorldDim;
+        return coords;
+    }
 
+    public int coordToLineal(int x, int y, int offset) {
+        return (x - 1) * WorldDim + (y - 1) + offset;
+    }
+    @Override
     protected void takeDown() {
         System.out.println("Agent " + getAID().getName() + " terminating ");
+        System.exit(0);
     }
 
 }
