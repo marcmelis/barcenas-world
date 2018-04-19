@@ -24,7 +24,6 @@ class EnvBehaviour extends CyclicBehaviour {
             int inx, iny;
 
             System.out.println("\tWORLD => Received message with content: " + tokens[0] + " " + tokens[1] + " " + tokens[2]);
-            // myAgent.getLocalName()
             if (tokens[0].equals("MOVETO")) {
                 ACLMessage reply = msg.createReply();
 
@@ -53,9 +52,31 @@ class EnvBehaviour extends CyclicBehaviour {
                 if (((BarcenasWorldEnv) myAgent).isBarcenasAround(inx, iny)) {
                     reply.setContent(nx + " " + ny + " " + "YES");
                     System.out.println("\tWORLD => It smells at (" + nx + "," + ny + ")");
-                } else {
+                }else{
                     reply.setContent(nx + " " + ny + " " + "NO");
                     System.out.println("\tWORLD => It DOES not smell at (" + nx + "," + ny + ")");
+                }
+                
+                myAgent.send(reply);
+                
+            } else if(tokens[0].equals("ISMARIANOHERE")) {
+                ACLMessage reply = msg.createReply();
+                nx = tokens[1];
+                ny = tokens[2];
+                inx = Integer.parseInt(nx);
+                iny = Integer.parseInt(ny);
+                
+                if(((BarcenasWorldEnv) myAgent).isMarianoHere(inx, iny)) {
+                    System.out.println("\tWORLD => Mariano found. (" + nx + "," + ny + ")");
+                    if (((BarcenasWorldEnv)myAgent).BarcenasY > ((BarcenasWorldEnv)myAgent).MarianoY ) {
+                        reply.setContent(nx + " " + ny + " " + "ML");
+                        System.out.println("\tWORLD => Mariano says that Barcenas is at his left (" + nx + "," + ny + ")");
+                    } else {
+                        reply.setContent(nx + " " + ny + " " + "MR");
+                        System.out.println("\tWORLD => Mariano says that Barcenas is at his right. (" + nx + "," + ny + ")");
+                    }
+                } else {
+                    reply.setContent(nx + " " + ny + " " + "NO");
                 }
                 myAgent.send(reply);
             }
@@ -70,7 +91,7 @@ class EnvBehaviour extends CyclicBehaviour {
 
 public class BarcenasWorldEnv extends Agent {
 
-    int BarcenasX, BarcenasY, WorldDim;
+    public int BarcenasX, BarcenasY, MarianoX, MarianoY, WorldDim;
 
     // Check if position x,y is within the limits of the
     // WorldDim x WorldDim   world
@@ -105,17 +126,22 @@ public class BarcenasWorldEnv extends Agent {
 
     protected void setup() {
         Object[] args = getArguments();
-        if (args != null && args.length > 2) {
+        if (args != null && args.length > 4) {
             WorldDim = Integer.parseInt((String) args[0]);
             BarcenasX = Integer.parseInt((String) args[1]);
             BarcenasY = Integer.parseInt((String) args[2]);
+            MarianoX = Integer.parseInt((String) args[3]);
+            MarianoY = Integer.parseInt((String) args[4]);
         } else {
             System.out.println("\tWORLD: Not enough args");
         }
 
         addBehaviour(new EnvBehaviour());
     }
-
+    
+    public Boolean isMarianoHere(int x, int y){
+        return x == MarianoX && y == MarianoY;
+    }
     protected void takeDown() {
         System.out.println("\tAgent " + getAID().getName() + " terminating... ");
     }

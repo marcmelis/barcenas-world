@@ -69,7 +69,8 @@ class FinderBehaviour extends CyclicBehaviour {
                     myAgent.send(reply);
                     state = 2;
                 }
-            } else {
+            } else if (state == 2) {
+                ACLMessage reply = msg.createReply();
                 // Get answer from Enviroment Agent for query SMELLAT X Y
                 // Content should be: X Y YES/NO
                 String[] smellresult = msg.getContent().split(" ");
@@ -77,33 +78,54 @@ class FinderBehaviour extends CyclicBehaviour {
                 sx = Integer.parseInt(smellresult[0]);
                 sy = Integer.parseInt(smellresult[1]);
                 if (smellresult[2].equals("YES")) {
-                    // HERE you should perform the reasoning associated with discovering
                     // that it smells at position sx sy
                     System.out.println("FINDER => It smells at " + smellresult[0] + " " + smellresult[1]);
                 } else {
-                    // HERE you should perform the reasoning associated with discovering
                     // that it DOES NOT smell at position sx sy
                     System.out.println("FINDER => It DOESN'T smell at " + smellresult[0] + " " + smellresult[1]);
                 }
                 try {
                     // Get answer from the formula adding the evidence
                     ((BarcenasFinder) myAgent).smellAt(sx, sy, smellresult[2]);
-                } catch (ParseFormatException ex) {
-                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (IOException ex) {
-                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (ContradictionException ex) {
-                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (TimeoutException ex) {
+                } catch (ParseFormatException | IOException | ContradictionException | TimeoutException ex) {
                     Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
                 }
+                //Ask if Mariano is here
+                reply.setContent("ISMARIANOHERE " + sx + " " + sy);
+                myAgent.send(reply);
+                state = 3;
+            } else {
+                // Get answer from Enviroment Agent for query ISMARIANOHERE X Y
+                // Content should be: X Y [ML|MR|NO]
+                String[] smellresult = msg.getContent().split(" ");
+                int mx, my;
+                mx = Integer.parseInt(smellresult[0]);
+                my = Integer.parseInt(smellresult[1]);
+                if (!smellresult[2].equals("NO")) {
+                    if (smellresult[2].equals("ML")) {
+                        // that it smells at position sx sy
+                        System.out.println("FINDER => Mariano says that Barcenas is at his left. From (" + smellresult[0] + "," + smellresult[1] + ")");
+                    } else if (smellresult[2].equals("MR")) {
+                        // that it DOES NOT smell at position sx sy
+                        System.out.println("FINDER => Mariano says that Barcenas is at his right. From (" + smellresult[0] + "," + smellresult[1] + ")");
+                    }
+//                    try {
+//                        // Get answer from the formula adding the wisdom of Mariano
+//                        ((BarcenasFinder) myAgent).marianoFound(mx, my, smellresult[2]);
+//                    } catch (ParseFormatException | IOException | ContradictionException | TimeoutException ex) {
+//                        Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
+//                    }
+                }
+
                 ((BarcenasFinder) myAgent).moveToNext();
                 state = 1;
+
             }
         } else {
             block();
         }
     }
+
 }
 
 class Position {
@@ -133,7 +155,8 @@ public class BarcenasFinder extends Agent {
     int WorldDim;
     int BarcenasPastOffset;
     int BarcenasFutureOffset;
-    int ScopeOffset;
+    int SmellsOffset;
+    int MarianoOffset;
     Boolean BarcenasFound = false;
     ISolver solver;
     String EnvironmentAgentNickName = "BarcenasWorld";
@@ -200,7 +223,7 @@ public class BarcenasFinder extends Agent {
             System.out.println("MSG.   => WARNING, using default Environment nick name!");
         }
 
-        System.out.print("MSG.   => Getting name of World Agent: " + EnvironmentAgentNickName);
+        System.out.println("MSG.   => Getting name of World Agent: " + EnvironmentAgentNickName);
         EnvironmentAgentID = new AID(EnvironmentAgentNickName, AID.ISLOCALNAME);
         addBehaviour(new FinderBehaviour());
         moveToNext();
@@ -253,9 +276,9 @@ public class BarcenasFinder extends Agent {
         //Add the evidence
         VecInt evidence = new VecInt();
         if (smells.equals("YES")) {
-            evidence.insertFirst((x - 1) * WorldDim + y - 1 + ScopeOffset);
+            evidence.insertFirst((x - 1) * WorldDim + y - 1 + SmellsOffset);
         } else {
-            evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + ScopeOffset));
+            evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + SmellsOffset));
         }
         solver.addClause(evidence);
 
@@ -294,6 +317,59 @@ public class BarcenasFinder extends Agent {
         if (BarcenasFound) {
             takeDown();
         }
+
+    }
+    
+    public void marianoFound(int x, int y, String marianoInfo) throws ParseFormatException, IOException, ContradictionException, TimeoutException {
+        //Add the evidence
+        VecInt evidence = new VecInt();
+        //WIP
+        if (marianoInfo.equals("YES")) {
+            evidence.insertFirst((x - 1) * WorldDim + y - 1 + SmellsOffset);
+        } else if (marianoInfo.equals("ML")) {
+            // Falta implementar
+            System.out.println("FINDER => Adding Mariano Left Evidence");
+        } else if (marianoInfo.equals("MR")) {
+            // Falta implementar 
+            System.out.println("FINDER => Adding Mariano Right Evidence");
+        } else {
+            evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + SmellsOffset));
+        }
+        solver.addClause(evidence);
+
+        //Add the last future clauses to past clauses
+        if (futureToPast != null) {
+            Iterator it = futureToPast.iterator();
+            while (it.hasNext()) {
+                solver.addClause((VecInt) it.next());
+            }
+        }
+        futureToPast = new ArrayList<VecInt>();
+
+        for (int i = 1; i < WorldDim + 1; i++) {
+            for (int j = 1; j < WorldDim + 1; j++) {
+                int linealIndex = (i - 1) * WorldDim + j - 1 + BarcenasFutureOffset;
+                VecInt variablePositive = new VecInt();
+                VecInt variableNegative = new VecInt();
+                variablePositive.insertFirst(linealIndex);
+                variableNegative.insertFirst(-linealIndex);
+
+                if (!(solver.isSatisfiable(variablePositive))) {
+                    futureToPast.add(variableNegative);
+                    //System.out.println("FINDER => Barcenas not found (" + i + "," + j + ")");
+                    matrix[j - 1][i - 1] = "X";
+                }
+
+                if (!(solver.isSatisfiable(variableNegative))) {
+                    System.out.println("FINDER => Barcenas Found at (" + i + "," + j + ")");
+                    matrix[j - 1][i - 1] = "B";
+                    BarcenasFound = true;
+                }
+            }
+        }
+
+        printMatrix();
+       
 
     }
 
@@ -343,14 +419,14 @@ public class BarcenasFinder extends Agent {
             solver.addClause(clause);
         }
 
-        // Scope implications (nxnxnxn clauses)
-        ScopeOffset = actualLiteral;
+        // Smells implications (nxnxnxn clauses)
+        SmellsOffset = actualLiteral;
         for (int y = 0; y < worldLinealDim; y++) {
-            int s_x = linealToCoord(actualLiteral, ScopeOffset)[0];
-            int s_y = linealToCoord(actualLiteral, ScopeOffset)[1];
+            int s_x = linealToCoord(actualLiteral, SmellsOffset)[0];
+            int s_y = linealToCoord(actualLiteral, SmellsOffset)[1];
             for (int b_x = 1; b_x < WorldDim + 1; b_x++) {
                 for (int b_y = 1; b_y < WorldDim + 1; b_y++) {
-                    // if in range of the scope
+                    // if smells
                     if ((b_x == s_x && b_y == s_y)
                             || (b_x + 1 == s_x && b_y == s_y)
                             || (b_x - 1 == s_x && b_y == s_y)
@@ -371,6 +447,9 @@ public class BarcenasFinder extends Agent {
             actualLiteral++;
 
         }
+        // Mariano implications
+        MarianoOffset = actualLiteral;
+        //WIP
 
         // Not in the 1,1 clauses (2 clauses)
         VecInt notInFuture = new VecInt();
