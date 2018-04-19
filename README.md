@@ -22,7 +22,7 @@ Where:
 
 **Barcenas** and **Mariano** are in a map of `worldDimension` x `worldDimension`. The goal of the problem is to find **Barcenas**. **Barcenas** smells at his position and in the adjacent ones in a cross. Our Agent moves around the map trying to find **Barcenas**. Our Agent can smell **Barcenas** if he is in **Barcenas** range of smell. Our Agent can meet with **Mariano** if he steps in the same position of the map. Mariano will tell to our Agent if **Barcenas** is at his right or at his left (If it is in the same column he will say right).
 
-## stepsfile.txt
+### stepsfile.txt
 
 `stepsfile.txt`is a flat text document with the steps our agent will do with the following format.
 ```
@@ -31,7 +31,7 @@ Where:
 Being `l` = `worldDimension`
 Our Agent will just do the steps of the file by order. The steps don't need to be adjacent, you can jump from position to position.
 
-## stepsfile.txt
+### Example
 
 Execute the following commands if you have the right `$CLASSPATH` with both Jade and SAT4J libraries.
 ```
