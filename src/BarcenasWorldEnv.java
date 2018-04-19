@@ -70,11 +70,8 @@ class EnvBehaviour extends CyclicBehaviour {
                     System.out.println("\tWORLD => Mariano found. (" + nx + "," + ny + ")");
                     if (((BarcenasWorldEnv)myAgent).BarcenasY > ((BarcenasWorldEnv)myAgent).MarianoY ) {
                         reply.setContent(nx + " " + ny + " " + "ML");
-                        System.out.println("\tWORLD => Mariano says that Barcenas is at his left (" + nx + "," + ny + ")");
                     } else {
-                        reply.setContent(nx + " " + ny + " " + "MR");
-                        System.out.println("\tWORLD => Mariano says that Barcenas is at his right. (" + nx + "," + ny + ")");
-                    }
+                        reply.setContent(nx + " " + ny + " " + "MR");                    }
                 } else {
                     reply.setContent(nx + " " + ny + " " + "NO");
                 }

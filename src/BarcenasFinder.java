@@ -312,14 +312,14 @@ public class BarcenasFinder extends Agent {
                 }
             }
         }
-        
+
         printMatrix();
         if (BarcenasFound) {
             takeDown();
         }
 
     }
-    
+
     public void marianoFound(int x, int y, String marianoInfo) throws ParseFormatException, IOException, ContradictionException, TimeoutException {
         //Add the evidence
         VecInt evidence = new VecInt();
@@ -369,7 +369,6 @@ public class BarcenasFinder extends Agent {
         }
 
         printMatrix();
-       
 
     }
 
@@ -388,8 +387,7 @@ public class BarcenasFinder extends Agent {
         solver = SolverFactory.newDefault();
         solver.setTimeout(3600);
         int worldLinealDim = WorldDim * WorldDim;
-        solver.newVar(worldLinealDim * 3);
-        solver.setExpectedNumberOfClauses(2 + worldLinealDim + worldLinealDim * 2 + 2);
+        solver.newVar(worldLinealDim * 4);
 
         int actualLiteral = 1;
 
@@ -421,7 +419,7 @@ public class BarcenasFinder extends Agent {
 
         // Smells implications (nxnxnxn clauses)
         SmellsOffset = actualLiteral;
-        for (int y = 0; y < worldLinealDim; y++) {
+        for (int k = 0; k < worldLinealDim; k++) {
             int s_x = linealToCoord(actualLiteral, SmellsOffset)[0];
             int s_y = linealToCoord(actualLiteral, SmellsOffset)[1];
             for (int b_x = 1; b_x < WorldDim + 1; b_x++) {
@@ -449,8 +447,28 @@ public class BarcenasFinder extends Agent {
         }
         // Mariano implications
         MarianoOffset = actualLiteral;
-        //WIP
-
+        for (int k = 0; k < WorldDim; k++) {
+            int m_x = linealToCoord(actualLiteral, MarianoOffset)[0];
+            int m_y = linealToCoord(actualLiteral, MarianoOffset)[1];
+            for (int b_x = 1; b_x < WorldDim + 1; b_x++) {
+                for (int b_y = 1; b_y < WorldDim + 1; b_y++) {
+                    // if left
+                    if (b_y > m_y) {
+                        VecInt clause = new VecInt();
+                        clause.insertFirst(-actualLiteral);
+                        clause.insertFirst(-coordToLineal(b_x, b_y, BarcenasFutureOffset));
+                        solver.addClause(clause);
+                        // if right
+                    } else {
+                        VecInt clause = new VecInt();
+                        clause.insertFirst(actualLiteral);
+                        clause.insertFirst(-coordToLineal(b_x, b_y, BarcenasFutureOffset));
+                        solver.addClause(clause);
+                    }
+                }
+            }
+            actualLiteral++;
+        }
         // Not in the 1,1 clauses (2 clauses)
         VecInt notInFuture = new VecInt();
         VecInt notInPast = new VecInt();
