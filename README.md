@@ -37,3 +37,8 @@ Our Agent will just do the steps of the file by order. The steps don't need to b
 $ echo "1,1 1,2 2,2 2,3 3,3 4,3 4,4 4,5 5,5" > steps.txt
 $ java jade.Boot -agents 'BarcenasWorld:BarcenasWorldEnv(6,4,4,2,2);Finder:BarcenasFinder(BarcenasWorld,6,steps.txt)'
 ```
+
+## Authors
+
+* [**Marc Melis**](https://github.com/markankaro)
+* [**Roger Truchero**](https://github.com/rochii)
