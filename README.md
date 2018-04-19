@@ -1,7 +1,7 @@
 # barcenas_world
 Propositional Logic Agents with the JADE platform and SAT4J. \
 You can find a copy of this repository at https://github.com/markankaro/barcenas_world. \
-The goal of this practice is to modelize a problem with Propositional Logic and implement it. \
+The goal of this practice is to modelize a problem with Propositional Logic and implement it. 
 
 ## Requirements
 
