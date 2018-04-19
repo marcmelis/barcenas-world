@@ -1,7 +1,7 @@
 # barcenas_world
-Propositional Logic Agents with the JADE platform and SAT4J.
-You can find a copy of this repository at https://github.com/markankaro/barcenas_world.
-The goal of this practice is to modelize a problem with Propositional Logic and implement it.
+Propositional Logic Agents with the JADE platform and SAT4J. \
+You can find a copy of this repository at https://github.com/markankaro/barcenas_world. \
+The goal of this practice is to modelize a problem with Propositional Logic and implement it. \
 
 ## Requirements
 
@@ -35,7 +35,7 @@ Our Agent will just do the steps of the file by order. The steps don't need to b
 
 ### Example
 
-Execute the following commands if you have the right `$CLASSPATH` with both Jade and SAT4J libraries.
+Execute the following commands if you have the right `$CLASSPATH` with both Jade and SAT4J `.jar`.
 ```
 $ echo "1,1 1,2 2,2 2,3 3,3 4,3 4,4 4,5 5,5" > steps.txt
 ```
