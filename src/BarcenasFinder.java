@@ -97,24 +97,24 @@ class FinderBehaviour extends CyclicBehaviour {
             } else {
                 // Get answer from Enviroment Agent for query ISMARIANOHERE X Y
                 // Content should be: X Y [ML|MR|NO]
-                String[] smellresult = msg.getContent().split(" ");
+                String[] marianoInfo = msg.getContent().split(" ");
                 int mx, my;
-                mx = Integer.parseInt(smellresult[0]);
-                my = Integer.parseInt(smellresult[1]);
-                if (!smellresult[2].equals("NO")) {
-                    if (smellresult[2].equals("ML")) {
+                mx = Integer.parseInt(marianoInfo[0]);
+                my = Integer.parseInt(marianoInfo[1]);
+                if (!marianoInfo[2].equals("NO")) {
+                    if (marianoInfo[2].equals("ML")) {
                         // that it smells at position sx sy
-                        System.out.println("FINDER => Mariano says that Barcenas is at his left. From (" + smellresult[0] + "," + smellresult[1] + ")");
-                    } else if (smellresult[2].equals("MR")) {
+                        System.out.println("FINDER => Mariano says that Barcenas is at his left. From (" + marianoInfo[0] + "," + marianoInfo[1] + ")");
+                    } else if (marianoInfo[2].equals("MR")) {
                         // that it DOES NOT smell at position sx sy
-                        System.out.println("FINDER => Mariano says that Barcenas is at his right. From (" + smellresult[0] + "," + smellresult[1] + ")");
+                        System.out.println("FINDER => Mariano says that Barcenas is at his right. From (" + marianoInfo[0] + "," + marianoInfo[1] + ")");
                     }
-//                    try {
-//                        // Get answer from the formula adding the wisdom of Mariano
-//                        ((BarcenasFinder) myAgent).marianoFound(mx, my, smellresult[2]);
-//                    } catch (ParseFormatException | IOException | ContradictionException | TimeoutException ex) {
-//                        Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
-//                    }
+                    try {
+                        // Get answer from the formula adding the wisdom of Mariano
+                        ((BarcenasFinder) myAgent).marianoFound(mx, my, marianoInfo[2]);
+                    } catch (ParseFormatException | IOException | ContradictionException | TimeoutException ex) {
+                        Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 }
 
                 ((BarcenasFinder) myAgent).moveToNext();
@@ -323,17 +323,10 @@ public class BarcenasFinder extends Agent {
     public void marianoFound(int x, int y, String marianoInfo) throws ParseFormatException, IOException, ContradictionException, TimeoutException {
         //Add the evidence
         VecInt evidence = new VecInt();
-        //WIP
-        if (marianoInfo.equals("YES")) {
-            evidence.insertFirst((x - 1) * WorldDim + y - 1 + SmellsOffset);
-        } else if (marianoInfo.equals("ML")) {
-            // Falta implementar
-            System.out.println("FINDER => Adding Mariano Left Evidence");
-        } else if (marianoInfo.equals("MR")) {
-            // Falta implementar 
-            System.out.println("FINDER => Adding Mariano Right Evidence");
+        if (marianoInfo.equals("ML")) {
+            evidence.insertFirst(coordToLineal(x, y, MarianoOffset));
         } else {
-            evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + SmellsOffset));
+            evidence.insertFirst(-coordToLineal(x, y, MarianoOffset));
         }
         solver.addClause(evidence);
 
@@ -367,9 +360,7 @@ public class BarcenasFinder extends Agent {
                 }
             }
         }
-
         printMatrix();
-
     }
 
     public void printMatrix() {

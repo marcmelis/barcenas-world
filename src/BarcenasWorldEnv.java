@@ -2,8 +2,6 @@
 import jade.core.Agent;
 import jade.core.behaviours.*;
 
-import java.util.ArrayList;
-import jade.core.AID;
 import jade.lang.acl.*;
 
 // The cyclic behaviour of the BarcenasWorld Environment:
@@ -68,7 +66,7 @@ class EnvBehaviour extends CyclicBehaviour {
                 
                 if(((BarcenasWorldEnv) myAgent).isMarianoHere(inx, iny)) {
                     System.out.println("\tWORLD => Mariano found. (" + nx + "," + ny + ")");
-                    if (((BarcenasWorldEnv)myAgent).BarcenasY > ((BarcenasWorldEnv)myAgent).MarianoY ) {
+                    if (((BarcenasWorldEnv)myAgent).BarcenasY < ((BarcenasWorldEnv)myAgent).MarianoY ) {
                         reply.setContent(nx + " " + ny + " " + "ML");
                     } else {
                         reply.setContent(nx + " " + ny + " " + "MR");                    }
