@@ -329,7 +329,7 @@ public class BarcenasFinder extends Agent {
             evidence.insertFirst(-coordToLineal(x, y, MarianoOffset));
         }
         solver.addClause(evidence);
-
+        
         //Add the last future clauses to past clauses
         if (futureToPast != null) {
             Iterator it = futureToPast.iterator();

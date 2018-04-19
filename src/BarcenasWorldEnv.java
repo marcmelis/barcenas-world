@@ -63,7 +63,6 @@ class EnvBehaviour extends CyclicBehaviour {
                 ny = tokens[2];
                 inx = Integer.parseInt(nx);
                 iny = Integer.parseInt(ny);
-                
                 if(((BarcenasWorldEnv) myAgent).isMarianoHere(inx, iny)) {
                     System.out.println("\tWORLD => Mariano found. (" + nx + "," + ny + ")");
                     if (((BarcenasWorldEnv)myAgent).BarcenasY < ((BarcenasWorldEnv)myAgent).MarianoY ) {
