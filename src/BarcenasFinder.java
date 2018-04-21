@@ -383,7 +383,7 @@ public class BarcenasFinder extends Agent {
 
         int actualLiteral = 1;
 
-        // Barcenas t-1, from 1,1 to n,n (nxn clauses)
+        // Barcenas t-1, from 1,1 to n,n (1 clause)
         BarcenasPastOffset = actualLiteral;
         VecInt pastClause = new VecInt();
         for (int i = 0; i < worldLinealDim; i++) {
@@ -392,7 +392,7 @@ public class BarcenasFinder extends Agent {
         }
         solver.addClause(pastClause);
 
-        // Barcenas t+1, from 1,1 to n,n (nxn clauses)
+        // Barcenas t+1, from 1,1 to n,n (1 clause)
         BarcenasFutureOffset = actualLiteral;
         VecInt futureClause = new VecInt();
         for (int i = 0; i < worldLinealDim; i++) {
@@ -438,7 +438,7 @@ public class BarcenasFinder extends Agent {
 
         }
 
-        // Mariano implications
+        // Mariano implications (nxnxnxn clauses)
         MarianoOffset = actualLiteral;
         for (int k = 0; k < worldLinealDim; k++) {
             int m_x = linealToCoord(actualLiteral, MarianoOffset)[0];
