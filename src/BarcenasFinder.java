@@ -360,6 +360,7 @@ public class BarcenasFinder extends Agent {
                 }
             }
         }
+        matrix[y - 1][x - 1] = "M";
         printMatrix();
     }
 
@@ -436,20 +437,21 @@ public class BarcenasFinder extends Agent {
             actualLiteral++;
 
         }
+
         // Mariano implications
         MarianoOffset = actualLiteral;
         for (int k = 0; k < WorldDim; k++) {
             int m_x = linealToCoord(actualLiteral, MarianoOffset)[0];
             int m_y = linealToCoord(actualLiteral, MarianoOffset)[1];
-            for (int b_x = 1; b_x < WorldDim + 1; b_x++) {
-                for (int b_y = 1; b_y < WorldDim + 1; b_y++) {
-                    // if left
-                    if (b_y > m_y) {
+            for (int b_x = 1; b_x <= WorldDim; b_x++) {
+                for (int b_y = 1; b_y <= WorldDim; b_y++) {
+                    // If left
+                    if (b_y >= m_y) {
                         VecInt clause = new VecInt();
                         clause.insertFirst(-actualLiteral);
                         clause.insertFirst(-coordToLineal(b_x, b_y, BarcenasFutureOffset));
                         solver.addClause(clause);
-                        // if right
+                        // If right
                     } else {
                         VecInt clause = new VecInt();
                         clause.insertFirst(actualLiteral);
@@ -460,6 +462,7 @@ public class BarcenasFinder extends Agent {
             }
             actualLiteral++;
         }
+
         // Not in the 1,1 clauses (2 clauses)
         VecInt notInFuture = new VecInt();
         VecInt notInPast = new VecInt();
