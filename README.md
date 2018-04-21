@@ -1,7 +1,7 @@
 # barcenas_world
 Propositional Logic Agents with the JADE platform and SAT4J. \
 You can find a copy of this repository at https://github.com/markankaro/barcenas_world. \
-The goal of this practice is to modelize a problem with Propositional Logic and implement it. 
+The goal of this practice is to modelize a problem with Propositional Logic and implement it.
 
 ## Requirements
 
@@ -36,13 +36,18 @@ Our Agent will just do the steps of the file by order. The steps don't need to b
 ### Example
 
 Execute the following commands if you have the right `$CLASSPATH` with both Jade and SAT4J `.jar`.
+
+Create the list of steps.
 ```
 $ echo "1,1 1,2 2,2 2,3 3,3 4,3 4,4 4,5 5,5" > steps.txt
 ```
 
+Execute the agents.
 ```
 $ java jade.Boot -agents 'BarcenasWorld:BarcenasWorldEnv(6,4,4,2,2);Finder:BarcenasFinder(BarcenasWorld,6,steps.txt)'
 ```
+At 2,2 the finder agent should meet with **Mariano** and discard the first column as he says that barcenas is at his right.
+The program should stop by the 4,4 step where the finder has enough evidence that **Barcenas** is in 4,4.
 
 ## Authors
 

@@ -179,7 +179,15 @@ public class BarcenasFinder extends Agent {
             System.out.println("FINDER => Not enough args");
             System.exit(0);
         }
-        
+        try {
+            solver = buildGamma();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ContradictionException ex) {
+            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
+        }
         idNextStep = 0;
         System.out.println("STARTING FINDER AGENT...");
 
@@ -207,13 +215,7 @@ public class BarcenasFinder extends Agent {
             String[] coords = stepsList[i].split(",");
             listOfSteps.add(new Position(Integer.parseInt(coords[0]), Integer.parseInt(coords[1])));
         }
-        try {
-            solver = buildGamma();
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException | ContradictionException ex) {
-            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
-        }
+
         numMovements = listOfSteps.size();
         if (args != null && args.length > 0) {
             EnvironmentAgentNickName = (String) args[0];
@@ -378,14 +380,10 @@ public class BarcenasFinder extends Agent {
         solver.setTimeout(3600);
         int worldLinealDim = WorldDim * WorldDim;
         solver.newVar(worldLinealDim * 4);
-        solver.setExpectedNumberOfClauses( 4 + worldLinealDim 
-                + worldLinealDim*worldLinealDim
-                + worldLinealDim*worldLinealDim
-                + (worldLinealDim + 2) * listOfSteps.size());
-        
+
         int actualLiteral = 1;
 
-        // Barcenas t-1, from 1,1 to n,n (1 clause)
+        // Barcenas t-1, from 1,1 to n,n (nxn clauses)
         BarcenasPastOffset = actualLiteral;
         VecInt pastClause = new VecInt();
         for (int i = 0; i < worldLinealDim; i++) {
@@ -394,7 +392,7 @@ public class BarcenasFinder extends Agent {
         }
         solver.addClause(pastClause);
 
-        // Barcenas t+1, from 1,1 to n,n (1 clause)
+        // Barcenas t+1, from 1,1 to n,n (nxn clauses)
         BarcenasFutureOffset = actualLiteral;
         VecInt futureClause = new VecInt();
         for (int i = 0; i < worldLinealDim; i++) {
@@ -440,15 +438,15 @@ public class BarcenasFinder extends Agent {
 
         }
 
-        // Mariano implications (nxnxnxn clauses)
+        // Mariano implications
         MarianoOffset = actualLiteral;
-        for (int k = 0; k < WorldDim; k++) {
+        for (int k = 0; k < worldLinealDim; k++) {
             int m_x = linealToCoord(actualLiteral, MarianoOffset)[0];
             int m_y = linealToCoord(actualLiteral, MarianoOffset)[1];
-            for (int b_x = 1; b_x < WorldDim +1; b_x++) {
-                for (int b_y = 1; b_y < WorldDim +1; b_y++) {
+            for (int b_x = 1; b_x <= WorldDim; b_x++) {
+                for (int b_y = 1; b_y <= WorldDim; b_y++) {
                     // If left
-                    if (b_y > m_y) {
+                    if (b_y >= m_y) {
                         VecInt clause = new VecInt();
                         clause.insertFirst(-actualLiteral);
                         clause.insertFirst(-coordToLineal(b_x, b_y, BarcenasFutureOffset));
