@@ -228,7 +228,7 @@ public class BarcenasFinder extends Agent {
             String[] coords = stepsList1.split(",");
             listOfSteps.add(new Position(Integer.parseInt(coords[0]), Integer.parseInt(coords[1])));
         }
-        numMovements = listOfSteps.size(); // Initialize of numMovements
+        numMovements = listOfSteps.size(); // Initialization of numMovements
     }
 
     public void initializeMatrix() {
@@ -273,8 +273,21 @@ public class BarcenasFinder extends Agent {
         }
     }
 
-    public void smellAt(int x, int y, String smells) throws ParseFormatException, IOException, ContradictionException, TimeoutException {
+    public void smellAt(int x, int y, String smells) throws ParseFormatException, IOException,
+            ContradictionException, TimeoutException {
         //Add the evidence
+        VecInt evidence = addBarcenasEvidence(x, y, smells);
+        //Add the last future clauses to past clauses
+        addBarcenasLastFutureClausesToPastClauses();
+        //Printing knowledge matrix
+        printMatrix();
+        
+        if (BarcenasFound) {
+            takeDown();
+        }
+    }
+
+    public VecInt addBarcenasEvidence(int x, int y, String smells) throws ContradictionException{
         VecInt evidence = new VecInt();
         if (smells.equals("YES")) {
             evidence.insertFirst((x - 1) * WorldDim + y - 1 + SmellsOffset);
@@ -282,16 +295,19 @@ public class BarcenasFinder extends Agent {
             evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + SmellsOffset));
         }
         solver.addClause(evidence);
+        return evidence;
+    }
 
-        //Add the last future clauses to past clauses
+    public void addBarcenasLastFutureClausesToPastClauses()throws ParseFormatException, IOException,
+            ContradictionException, TimeoutException{
         if (futureToPast != null) {
             Iterator it = futureToPast.iterator();
             while (it.hasNext()) {
                 solver.addClause((VecInt) it.next());
             }
         }
-        futureToPast = new ArrayList<>();
 
+        futureToPast = new ArrayList<>();
         for (int i = 1; i < WorldDim + 1; i++) {
             for (int j = 1; j < WorldDim + 1; j++) {
                 int linealIndex = (i - 1) * WorldDim + j - 1 + BarcenasFutureOffset;
@@ -302,7 +318,6 @@ public class BarcenasFinder extends Agent {
 
                 if (!(solver.isSatisfiable(variablePositive))) {
                     futureToPast.add(variableNegative);
-                    //System.out.println("FINDER => Barcenas not found (" + i + "," + j + ")");
                     matrix[j - 1][i - 1] = "X";
                 }
                 if (!(solver.isSatisfiable(variableNegative))) {
@@ -312,14 +327,19 @@ public class BarcenasFinder extends Agent {
                 }
             }
         }
-        printMatrix();
-        if (BarcenasFound) {
-            takeDown();
-        }
     }
 
-    public void marianoFound(int x, int y, String marianoInfo) throws ParseFormatException, IOException, ContradictionException, TimeoutException {
+    public void marianoFound(int x, int y, String marianoInfo)throws ParseFormatException, IOException,
+            ContradictionException, TimeoutException{
         //Add the evidence
+        VecInt evidence = addMarianoEvidence(x, y, marianoInfo);
+
+        //Add the last future clauses to past clauses
+        addMarianoLastFutureClausesToPastClauses(x, y);
+        printMatrix();
+    }
+
+    public VecInt addMarianoEvidence(int x, int y, String marianoInfo)throws ContradictionException{
         VecInt evidence = new VecInt();
         if (marianoInfo.equals("ML")) {
             evidence.insertFirst(coordToLineal(x, y, MarianoOffset));
@@ -327,16 +347,19 @@ public class BarcenasFinder extends Agent {
             evidence.insertFirst(-coordToLineal(x, y, MarianoOffset));
         }
         solver.addClause(evidence);
+        return evidence;
+    }
 
-        //Add the last future clauses to past clauses
+    public void addMarianoLastFutureClausesToPastClauses(int x, int y)throws ParseFormatException, IOException,
+            ContradictionException, TimeoutException{
         if (futureToPast != null) {
             Iterator it = futureToPast.iterator();
             while (it.hasNext()) {
                 solver.addClause((VecInt) it.next());
             }
         }
-        futureToPast = new ArrayList<>();
 
+        futureToPast = new ArrayList<>();
         for (int i = 1; i < WorldDim + 1; i++) {
             for (int j = 1; j < WorldDim + 1; j++) {
                 int linealIndex = (i - 1) * WorldDim + j - 1 + BarcenasFutureOffset;
@@ -357,7 +380,6 @@ public class BarcenasFinder extends Agent {
             }
         }
         matrix[y - 1][x - 1] = "M";
-        printMatrix();
     }
 
     public void printMatrix() {
