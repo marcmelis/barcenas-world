@@ -149,6 +149,7 @@ public class BarcenasFinder extends Agent {
     ArrayList<Position> listOfSteps;
     ArrayList<VecInt> futureToPast = null;
     String[][] matrix;
+    String[] stepsList;
     int idNextStep, numMovements;
     int agentX, agentY;
     int WorldDim, WorldLinealDim;
@@ -188,9 +189,26 @@ public class BarcenasFinder extends Agent {
         } catch (IOException | ContradictionException ex) {
             Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
         }
+
         idNextStep = 0;
         System.out.println("STARTING FINDER AGENT...");
 
+        readSteps(); // Reading all steps from a file
+        initializeMatrix();
+
+        if (args.length > 0) {
+            EnvironmentAgentNickName = (String) args[0];
+        } else {
+            System.out.println("MSG.   => WARNING, using default Environment nick name!");
+        }
+
+        System.out.println("MSG.   => Getting name of World Agent: " + EnvironmentAgentNickName);
+        EnvironmentAgentID = new AID(EnvironmentAgentNickName, AID.ISLOCALNAME);
+        addBehaviour(new FinderBehaviour());
+        moveToNext();
+    }
+
+    public void readSteps(){
         // Prepare a list of movements to try with the FINDER Agent
         String steps = "";
         try {
@@ -204,27 +222,13 @@ public class BarcenasFinder extends Agent {
             Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
             exit(2);
         }
-
-        String[] stepsList = steps.split(" ");
+        stepsList = steps.split(" ");
         listOfSteps = new ArrayList<>(stepsList.length);
-        initializeMatrix();
-
         for (String stepsList1 : stepsList) {
             String[] coords = stepsList1.split(",");
             listOfSteps.add(new Position(Integer.parseInt(coords[0]), Integer.parseInt(coords[1])));
         }
-
-        numMovements = listOfSteps.size();
-        if (args.length > 0) {
-            EnvironmentAgentNickName = (String) args[0];
-        } else {
-            System.out.println("MSG.   => WARNING, using default Environment nick name!");
-        }
-
-        System.out.println("MSG.   => Getting name of World Agent: " + EnvironmentAgentNickName);
-        EnvironmentAgentID = new AID(EnvironmentAgentNickName, AID.ISLOCALNAME);
-        addBehaviour(new FinderBehaviour());
-        moveToNext();
+        numMovements = listOfSteps.size(); // Initialize of numMovements
     }
 
     public void initializeMatrix() {
