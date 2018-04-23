@@ -1,10 +1,4 @@
-/*
-TO DO:
-Terminar la función buildGamma
-Terminar la función smell at
-Hacer el smell at grafico
-Implementar a M.Rajoy
- */
+
 import jade.core.Agent;
 import jade.core.behaviours.*;
 
@@ -46,66 +40,91 @@ class FinderBehaviour extends CyclicBehaviour {
     // Use the smell sensor to obtain from the Environment
     // the smell in the current position
     //
+    @Override
     public void action() {
         // Get next message from evironment Agent
         ACLMessage msg = myAgent.receive();
 
         if (msg != null) {
             // myAgent.getLocalName()
-            if (state == 1) {
-                ACLMessage reply = msg.createReply();
-                String[] coords = msg.getContent().split(" ");
-                String nx;
-                String ny;
-                // Content should be: MOVEDTO X Y
-                nx = coords[1];
-                ny = coords[2];
-                if (coords[0].equals("MOVEDTO")) {
-                    ((BarcenasFinder) myAgent).movedTo(Integer.parseInt(nx), Integer.parseInt(ny));
+            switch (state) {
+                case 1: {
+                    ACLMessage reply = msg.createReply();
+                    String[] coords = msg.getContent().split(" ");
+                    String nx;
+                    String ny;
+                    // Content should be: MOVEDTO X Y
+                    nx = coords[1];
+                    ny = coords[2];
+                    if (coords[0].equals("MOVEDTO")) {
+                        ((BarcenasFinder) myAgent).movedTo(Integer.parseInt(nx), Integer.parseInt(ny));
 
-                    // Send message asking for smell info at current position
-                    reply.setPerformative(ACLMessage.QUERY_IF);
-                    reply.setContent("SMELLAT " + nx + " " + ny);
+                        // Send message asking for smell info at current position
+                        reply.setPerformative(ACLMessage.QUERY_IF);
+                        reply.setContent("SMELLAT " + nx + " " + ny);
+                        myAgent.send(reply);
+                        state = 2;
+                    }
+                    break;
+                }
+                case 2: {
+                    ACLMessage reply = msg.createReply();
+                    // Get answer from Enviroment Agent for query SMELLAT X Y
+                    // Content should be: X Y YES/NO
+                    String[] smellresult = msg.getContent().split(" ");
+                    int sx, sy;
+                    sx = Integer.parseInt(smellresult[0]);
+                    sy = Integer.parseInt(smellresult[1]);
+                    if (smellresult[2].equals("YES")) {
+                        // that it smells at position sx sy
+                        System.out.println("FINDER => It smells at " + smellresult[0] + " " + smellresult[1]);
+                    } else {
+                        // that it DOES NOT smell at position sx sy
+                        System.out.println("FINDER => It DOESN'T smell at " + smellresult[0] + " " + smellresult[1]);
+                    }
+                    try {
+                        // Get answer from the formula adding the evidence
+                        ((BarcenasFinder) myAgent).smellAt(sx, sy, smellresult[2]);
+                    } catch (ParseFormatException | IOException | ContradictionException | TimeoutException ex) {
+                        Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
+                    }       //Ask if Mariano is here
+                    reply.setContent("ISMARIANOHERE " + sx + " " + sy);
                     myAgent.send(reply);
-                    state = 2;
+                    state = 3;
+                    break;
                 }
-            } else {
-                // Get answer from Enviroment Agent for query SMELLAT X Y
-                // Content should be: X Y YES/NO
-                String[] smellresult = msg.getContent().split(" ");
-                int sx, sy;
-                sx = Integer.parseInt(smellresult[0]);
-                sy = Integer.parseInt(smellresult[1]);
-                if (smellresult[2].equals("YES")) {
-                    // HERE you should perform the reasoning associated with discovering
-                    // that it smells at position sx sy
-                    System.out.println("FINDER => It smells at " + smellresult[0] + " " + smellresult[1]);
-                } else if(smellresult[2].equals("MARIANO")) {
-                    System.out.println("FINDER => It smells MARIANO at " + smellresult[0] + " " + smellresult[1]);
-                }else{
-                    // HERE you should perform the reasoning associated with discovering
-                    // that it DOES NOT smell at position sx sy
-                    System.out.println("FINDER => It DOESN'T smell at " + smellresult[0] + " " + smellresult[1]);
-                }
-                try {
-                    // Get answer from the formula adding the evidence
-                    ((BarcenasFinder) myAgent).smellAt(sx, sy, smellresult[2]);
-                } catch (ParseFormatException ex) {
-                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (IOException ex) {
-                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (ContradictionException ex) {
-                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (TimeoutException ex) {
-                    Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                ((BarcenasFinder) myAgent).moveToNext();
-                state = 1;
+                default:
+                    // Get answer from Enviroment Agent for query ISMARIANOHERE X Y
+                    // Content should be: X Y [ML|MR|NO]
+                    String[] marianoInfo = msg.getContent().split(" ");
+                    int mx,
+                     my;
+                    mx = Integer.parseInt(marianoInfo[0]);
+                    my = Integer.parseInt(marianoInfo[1]);
+                    if (!marianoInfo[2].equals("NO")) {
+                        if (marianoInfo[2].equals("ML")) {
+                            // that it smells at position sx sy
+                            System.out.println("FINDER => Mariano says that Barcenas is at his left. From (" + marianoInfo[0] + "," + marianoInfo[1] + ")");
+                        } else if (marianoInfo[2].equals("MR")) {
+                            // that it DOES NOT smell at position sx sy
+                            System.out.println("FINDER => Mariano says that Barcenas is at his right. From (" + marianoInfo[0] + "," + marianoInfo[1] + ")");
+                        }
+                        try {
+                            // Get answer from the formula adding the wisdom of Mariano
+                            ((BarcenasFinder) myAgent).marianoFound(mx, my, marianoInfo[2]);
+                        } catch (ParseFormatException | IOException | ContradictionException | TimeoutException ex) {
+                            Logger.getLogger(FinderBehaviour.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                    ((BarcenasFinder) myAgent).moveToNext();
+                    state = 1;
+                    break;
             }
         } else {
             block();
         }
     }
+
 }
 
 class Position {
@@ -132,10 +151,12 @@ public class BarcenasFinder extends Agent {
     String[][] matrix;
     int idNextStep, numMovements;
     int agentX, agentY;
-    int WorldDim;
+    int WorldDim, WorldLinealDim;
     int BarcenasPastOffset;
     int BarcenasFutureOffset;
-    int ScopeOffset;
+    int SmellsOffset;
+    int MarianoOffset;
+    int actualLiteral;
     Boolean BarcenasFound = false;
     ISolver solver;
     String EnvironmentAgentNickName = "BarcenasWorld";
@@ -148,10 +169,12 @@ public class BarcenasFinder extends Agent {
     // arg 0 = world agent name
     // arg 1 = world size
     // arg 2 = name of the steps file
+    @Override
     protected void setup() {
         Object[] args = getArguments();
         if (args != null && args.length > 2) {
             WorldDim = Integer.parseInt((String) args[1]);
+            WorldLinealDim = WorldDim * WorldDim;
             StepsFile = (String) args[2];
 
         } else {
@@ -162,9 +185,7 @@ public class BarcenasFinder extends Agent {
             solver = buildGamma();
         } catch (FileNotFoundException ex) {
             Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ContradictionException ex) {
+        } catch (IOException | ContradictionException ex) {
             Logger.getLogger(BarcenasFinder.class.getName()).log(Level.SEVERE, null, ex);
         }
         idNextStep = 0;
@@ -176,8 +197,6 @@ public class BarcenasFinder extends Agent {
             BufferedReader br = new BufferedReader(new FileReader(StepsFile));
             steps = br.readLine();
             br.close();
-            String[] stepsList = steps.split(" ");
-
         } catch (FileNotFoundException ex) {
             System.out.println("MSG.   => Steps file not found");
             exit(1);
@@ -187,16 +206,16 @@ public class BarcenasFinder extends Agent {
         }
 
         String[] stepsList = steps.split(" ");
-        listOfSteps = new ArrayList<Position>(stepsList.length);
+        listOfSteps = new ArrayList<>(stepsList.length);
         initializeMatrix();
 
-        for (int i = 0; i < stepsList.length; i++) {
-            String[] coords = stepsList[i].split(",");
+        for (String stepsList1 : stepsList) {
+            String[] coords = stepsList1.split(",");
             listOfSteps.add(new Position(Integer.parseInt(coords[0]), Integer.parseInt(coords[1])));
         }
 
         numMovements = listOfSteps.size();
-        if (args != null && args.length > 0) {
+        if (args.length > 0) {
             EnvironmentAgentNickName = (String) args[0];
         } else {
             System.out.println("MSG.   => WARNING, using default Environment nick name!");
@@ -239,7 +258,6 @@ public class BarcenasFinder extends Agent {
     }
 
     public void moveToNext() {
-
         Position nextPosition;
 
         if (idNextStep < numMovements) {
@@ -255,15 +273,9 @@ public class BarcenasFinder extends Agent {
         //Add the evidence
         VecInt evidence = new VecInt();
         if (smells.equals("YES")) {
-            evidence.insertFirst((x - 1) * WorldDim + y - 1 + ScopeOffset);
-        } else if(smells.equals("ML")) {
-            // Falta implementar
-            System.out.println("FINDER => Adding Mariano Left Evidence");
-        }else if(smells.equals("MR")) {
-            // Falta implementar 
-            System.out.println("FINDER => Adding Mariano Right Evidence");
-        }else{
-            evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + ScopeOffset));
+            evidence.insertFirst((x - 1) * WorldDim + y - 1 + SmellsOffset);
+        } else {
+            evidence.insertFirst(-((x - 1) * WorldDim + y - 1 + SmellsOffset));
         }
         solver.addClause(evidence);
 
@@ -274,7 +286,7 @@ public class BarcenasFinder extends Agent {
                 solver.addClause((VecInt) it.next());
             }
         }
-        futureToPast = new ArrayList<VecInt>();
+        futureToPast = new ArrayList<>();
 
         for (int i = 1; i < WorldDim + 1; i++) {
             for (int j = 1; j < WorldDim + 1; j++) {
@@ -289,7 +301,6 @@ public class BarcenasFinder extends Agent {
                     //System.out.println("FINDER => Barcenas not found (" + i + "," + j + ")");
                     matrix[j - 1][i - 1] = "X";
                 }
-
                 if (!(solver.isSatisfiable(variableNegative))) {
                     System.out.println("FINDER => Barcenas Found at (" + i + "," + j + ")");
                     matrix[j - 1][i - 1] = "B";
@@ -297,12 +308,52 @@ public class BarcenasFinder extends Agent {
                 }
             }
         }
-        
         printMatrix();
         if (BarcenasFound) {
             takeDown();
         }
+    }
 
+    public void marianoFound(int x, int y, String marianoInfo) throws ParseFormatException, IOException, ContradictionException, TimeoutException {
+        //Add the evidence
+        VecInt evidence = new VecInt();
+        if (marianoInfo.equals("ML")) {
+            evidence.insertFirst(coordToLineal(x, y, MarianoOffset));
+        } else {
+            evidence.insertFirst(-coordToLineal(x, y, MarianoOffset));
+        }
+        solver.addClause(evidence);
+
+        //Add the last future clauses to past clauses
+        if (futureToPast != null) {
+            Iterator it = futureToPast.iterator();
+            while (it.hasNext()) {
+                solver.addClause((VecInt) it.next());
+            }
+        }
+        futureToPast = new ArrayList<>();
+
+        for (int i = 1; i < WorldDim + 1; i++) {
+            for (int j = 1; j < WorldDim + 1; j++) {
+                int linealIndex = (i - 1) * WorldDim + j - 1 + BarcenasFutureOffset;
+                VecInt variablePositive = new VecInt();
+                VecInt variableNegative = new VecInt();
+                variablePositive.insertFirst(linealIndex);
+                variableNegative.insertFirst(-linealIndex);
+
+                if (!(solver.isSatisfiable(variablePositive))) {
+                    futureToPast.add(variableNegative);
+                    matrix[j - 1][i - 1] = "X";
+                }
+                if (!(solver.isSatisfiable(variableNegative))) {
+                    System.out.println("FINDER => Barcenas Found at (" + i + "," + j + ")");
+                    matrix[j - 1][i - 1] = "B";
+                    BarcenasFound = true;
+                }
+            }
+        }
+        matrix[y - 1][x - 1] = "M";
+        printMatrix();
     }
 
     public void printMatrix() {
@@ -316,49 +367,80 @@ public class BarcenasFinder extends Agent {
         }
     }
 
-    public ISolver buildGamma() throws UnsupportedEncodingException, FileNotFoundException, IOException, ContradictionException {
+    public ISolver buildGamma() throws UnsupportedEncodingException,
+            FileNotFoundException, IOException, ContradictionException {
         solver = SolverFactory.newDefault();
         solver.setTimeout(3600);
-        int worldLinealDim = WorldDim * WorldDim;
-        solver.newVar(worldLinealDim * 3);
-        solver.setExpectedNumberOfClauses(2 + worldLinealDim + worldLinealDim * 2 + 2);
+        solver.newVar(WorldLinealDim * 4);
+        actualLiteral = 1;
 
-        int actualLiteral = 1;
+        // Barcenas t-1, from 1,1 to n,n (1 clause)
+        pastBarcenas();
+        // Barcenas t+1, from 1,1 to n,n (1 clause)
+        futureBarcenas();
+        // Barcenas t-1 -> Barcenas t+1 (nxn clauses)
+        pastBarcenasToFutureBarcenas();
+        // Smells implications (nxnxnxn clauses)
+        smells_implications(BarcenasFutureOffset);
+        // Mariano implications (nxnxnxn clauses)
+        mariano_implications(BarcenasFutureOffset);
+        // Not in the 1,1 clauses (2 clauses)
+        notInFirstPosition();
 
-        // Barcenas t-1, from 1,1 to n,n (nxn clauses)
+        return solver;
+    }
+
+    public void pastBarcenas()throws UnsupportedEncodingException,
+            FileNotFoundException, IOException, ContradictionException{
         BarcenasPastOffset = actualLiteral;
         VecInt pastClause = new VecInt();
-        for (int i = 0; i < worldLinealDim; i++) {
+        for (int i = 0; i < WorldLinealDim; i++) {
             pastClause.insertFirst(actualLiteral);
             actualLiteral++;
         }
         solver.addClause(pastClause);
+    }
 
-        // Barcenas t+1, from 1,1 to n,n (nxn clauses)
+    public void futureBarcenas()throws UnsupportedEncodingException,
+            FileNotFoundException, IOException, ContradictionException{
         BarcenasFutureOffset = actualLiteral;
         VecInt futureClause = new VecInt();
-        for (int i = 0; i < worldLinealDim; i++) {
+        for (int i = 0; i < WorldLinealDim; i++) {
             futureClause.insertFirst(actualLiteral);
             actualLiteral++;
         }
         solver.addClause(futureClause);
+    }
 
-        // Barcenas t-1 -> Barcenas t+1 (nxn clauses)
-        for (int i = 0; i < worldLinealDim; i++) {
+    public void pastBarcenasToFutureBarcenas() throws UnsupportedEncodingException,
+            FileNotFoundException, IOException, ContradictionException {
+        for (int i = 0; i < WorldLinealDim; i++) {
             VecInt clause = new VecInt();
             clause.insertFirst(i + 1);
             clause.insertFirst(-(i + BarcenasFutureOffset));
             solver.addClause(clause);
         }
+    }
 
-        // Scope implications (nxnxnxn clauses)
-        ScopeOffset = actualLiteral;
-        for (int y = 0; y < worldLinealDim; y++) {
-            int s_x = linealToCoord(actualLiteral, ScopeOffset)[0];
-            int s_y = linealToCoord(actualLiteral, ScopeOffset)[1];
+    public void notInFirstPosition()throws UnsupportedEncodingException,
+            FileNotFoundException, IOException, ContradictionException {
+        VecInt notInFuture = new VecInt();
+        VecInt notInPast = new VecInt();
+        notInFuture.insertFirst(-BarcenasFutureOffset);
+        notInPast.insertFirst(-BarcenasPastOffset);
+        solver.addClause(notInFuture);
+        solver.addClause(notInPast);
+    }
+
+    public void smells_implications(int BarcenasFutureOffset) throws
+            UnsupportedEncodingException, FileNotFoundException, IOException, ContradictionException {
+        SmellsOffset = actualLiteral;
+        for (int k = 0; k < WorldLinealDim; k++) {
+            int s_x = linealToCoord(actualLiteral, SmellsOffset)[0];
+            int s_y = linealToCoord(actualLiteral, SmellsOffset)[1];
             for (int b_x = 1; b_x < WorldDim + 1; b_x++) {
                 for (int b_y = 1; b_y < WorldDim + 1; b_y++) {
-                    // if in range of the scope
+                    // If smells
                     if ((b_x == s_x && b_y == s_y)
                             || (b_x + 1 == s_x && b_y == s_y)
                             || (b_x - 1 == s_x && b_y == s_y)
@@ -377,18 +459,34 @@ public class BarcenasFinder extends Agent {
                 }
             }
             actualLiteral++;
-
         }
+    }
 
-        // Not in the 1,1 clauses (2 clauses)
-        VecInt notInFuture = new VecInt();
-        VecInt notInPast = new VecInt();
-        notInFuture.insertFirst(-BarcenasFutureOffset);
-        notInPast.insertFirst(-BarcenasPastOffset);
-        solver.addClause(notInFuture);
-        solver.addClause(notInPast);
-
-        return solver;
+    public void mariano_implications(int BarcenasFutureOffset)throws
+            UnsupportedEncodingException, FileNotFoundException, IOException, ContradictionException {
+        MarianoOffset = actualLiteral;
+        for (int k = 0; k < WorldLinealDim; k++) {
+            int m_x = linealToCoord(actualLiteral, MarianoOffset)[0];
+            int m_y = linealToCoord(actualLiteral, MarianoOffset)[1];
+            for (int b_x = 1; b_x <= WorldDim; b_x++) {
+                for (int b_y = 1; b_y <= WorldDim; b_y++) {
+                    // If left
+                    if (b_y >= m_y) {
+                        VecInt clause = new VecInt();
+                        clause.insertFirst(-actualLiteral);
+                        clause.insertFirst(-coordToLineal(b_x, b_y, BarcenasFutureOffset));
+                        solver.addClause(clause);
+                    // If right
+                    } else {
+                        VecInt clause = new VecInt();
+                        clause.insertFirst(actualLiteral);
+                        clause.insertFirst(-coordToLineal(b_x, b_y, BarcenasFutureOffset));
+                        solver.addClause(clause);
+                    }
+                }
+            }
+            actualLiteral++;
+        }
     }
 
     public int coordToLineal(int x, int y, int offset) {
@@ -406,8 +504,9 @@ public class BarcenasFinder extends Agent {
         return coords;
     }
 
+    @Override
     protected void takeDown() {
-        System.out.println("Agent " + getAID().getName() + " terminating ");
+        System.out.println("MSG.   => Agent " + getAID().getName() + " terminating ");
         System.exit(0);
     }
 
